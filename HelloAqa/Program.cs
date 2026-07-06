@@ -73,13 +73,7 @@ while (roundsPlayed < totalRounds)
         (userChoice == 4 && computerChoice == 3) || // Well beats Scissors
         (userChoice == 2 && computerChoice == 4);   // Paper beats Well
 
-    bool computerWins =
-        (computerChoice == 1 && userChoice == 3) ||
-        (computerChoice == 2 && userChoice == 1) ||
-        (computerChoice == 3 && userChoice == 2) ||
-        (computerChoice == 4 && userChoice == 1) ||
-        (computerChoice == 4 && userChoice == 3) ||
-        (computerChoice == 2 && userChoice == 4);
+    bool computerWins = !playerWins && userChoice != computerChoice;
 
     roundsPlayed++;
 

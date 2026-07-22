@@ -1,165 +1,80 @@
 ﻿class Game
 {
-    public int PlayerHits { get; private set; }
-    public int ComputerHits { get; private set; }
+    private readonly GameSettings _settings;
 
-    private List<Shot> Shots { get; } = new List<Shot>();
+    // Пункт 1.5 — общая история всех выстрелов игры
+    private readonly List<Shot> _shots = new List<Shot>();
+
+    public Game(GameSettings settings)
+    {
+        _settings = settings;
+    }
 
     public void Play(Board userBoard)
     {
-        Board opponentBoard;
+        var opponentBoard = GenerateOpponentBoard(userBoard.Ships.Length);
 
-        try
-        {
-            opponentBoard = GenerateOpponentBoard(userBoard.Rows, userBoard.Columns);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Failed to generate opponent board: {e.Message}");
-            return;
-        }
-
-        var roundCount = 0;
+        // Пункт 1.3 — Game работает через IPlayer, без проверки конкретных типов
+        IPlayer human = new HumanPlayer("Player", userBoard);
+        IPlayer computer = new ComputerPlayer("Computer", opponentBoard);
 
         while (true)
         {
-            roundCount++;
-
             try
             {
-                if (!TryReadFromConsole("X", roundCount, out var xPosition))
-                    continue;
-                if (!TryReadFromConsole("Y", roundCount, out var yPosition))
-                    continue;
+                var userShot = human.Shoot(opponentBoard, _shots);
+                _shots.Add(userShot);
+                Console.WriteLine(userShot.Result == ShootResult.Hit ? "Hit!" : "Miss!");
 
-                var userShotPosition = new Position(xPosition, yPosition);
+                var computerShot = computer.Shoot(userBoard, _shots);
+                _shots.Add(computerShot);
+                Console.WriteLine(computerShot.Result == ShootResult.Hit ? "Computer hit your ship!" : "Computer missed!");
 
-                if (!opponentBoard.IsInside(userShotPosition))
-                    throw new Exception("Shot position is outside the board!");
+                Console.WriteLine("\nYour board:");
+                userBoard.Print(_shots, hideShips: false);
+                Console.WriteLine("\nOpponent board:");
+                opponentBoard.Print(_shots, hideShips: true);
 
-                bool alreadyShot = Shots.Any(s =>
-                    s.Board == opponentBoard &&
-                    s.Position.X == userShotPosition.X &&
-                    s.Position.Y == userShotPosition.Y);
+                // Пункт 5 — LINQ подсчёт потопленных кораблей
+                int userSunk = userBoard.Ships.Count(s => s.IsSunk);
+                int opponentSunk = opponentBoard.Ships.Count(s => s.IsSunk);
+                Console.WriteLine($"\nSunk ships — Yours: {userSunk}/{userBoard.Ships.Length} | Opponent: {opponentSunk}/{opponentBoard.Ships.Length}");
 
-                if (alreadyShot)
-                    throw new Exception($"You already shot at X:{xPosition}, Y:{yPosition}!");
-
-                var userShot = MakeShot(opponentBoard, userShotPosition);
-
-                if (userShot.IsHit)
+                if (opponentSunk == opponentBoard.Ships.Length)
                 {
-                    Console.WriteLine("Hit!");
-                    PlayerHits++;
-                }
-                else
-                {
-                    Console.WriteLine("Miss!");
+                    Console.WriteLine("\nYou sank all opponent ships! You win!");
+                    return;
                 }
 
-                var random = new Random();
-                Position computerShotPosition;
-
-                do
+                if (userSunk == userBoard.Ships.Length)
                 {
-                    int computerX = random.Next(0, userBoard.Rows);
-                    int computerY = random.Next(0, userBoard.Columns);
-                    computerShotPosition = new Position(computerX, computerY);
+                    Console.WriteLine("\nComputer sank all your ships! Computer wins!");
+                    return;
                 }
-                while (Shots.Any(s =>
-                    s.Board == userBoard &&
-                    s.Position.X == computerShotPosition.X &&
-                    s.Position.Y == computerShotPosition.Y));
-
-                var computerShot = MakeShot(userBoard, computerShotPosition);
-
-                Console.WriteLine($"Computer shoots at X:{computerShotPosition.X}, Y:{computerShotPosition.Y}");
-
-                if (computerShot.IsHit)
-                {
-                    Console.WriteLine("Computer hit your ship!");
-                    ComputerHits++;
-                }
-                else
-                {
-                    Console.WriteLine("Computer missed!");
-                }
-
-                PrintStats(userBoard, opponentBoard);
             }
             catch (Exception e)
             {
-                roundCount--; // ← откатываем счётчик — раунд не засчитан
                 Console.WriteLine($"Error: {e.Message}");
             }
         }
     }
 
-    private Shot MakeShot(Board board, Position position)
-    {
-        var ship = board.FindShip(position);
-        var shot = new Shot(board, position, ship);
-        Shots.Add(shot);
-        return shot;
-    }
-
-    private void PrintStats(Board userBoard, Board opponentBoard)
-    {
-        Console.WriteLine("\n=== STATISTICS ===");
-        PrintBoardStats("Your board", userBoard);
-        PrintBoardStats("Opponent board", opponentBoard);
-        Console.WriteLine($"Total score — You: {PlayerHits} | Computer: {ComputerHits}");
-        Console.WriteLine("==================\n");
-    }
-
-    private void PrintBoardStats(string boardName, Board board)
-    {
-        var boardShots = Shots.Where(s => s.Board == board).ToList();
-        int totalShots = boardShots.Count();
-        int hits = boardShots.Count(s => s.IsHit);
-        int misses = boardShots.Count(s => !s.IsHit);
-        bool anyMiss = boardShots.Any(s => !s.IsHit);
-        var firstHit = boardShots.FirstOrDefault(s => s.IsHit);
-        var hitPositions = boardShots
-            .Where(s => s.IsHit)
-            .Select(s => $"X:{s.Position.X}, Y:{s.Position.Y}")
-            .ToList();
-
-        Console.WriteLine($"\n--- {boardName} ---");
-        Console.WriteLine($"Total shots: {totalShots}");
-        Console.WriteLine($"Hits: {hits}");
-        Console.WriteLine($"Misses: {misses}");
-        Console.WriteLine($"Any miss: {anyMiss}");
-
-        if (firstHit != null)
-            Console.WriteLine($"First hit: X:{firstHit.Position.X}, Y:{firstHit.Position.Y}");
-        else
-            Console.WriteLine("First hit: none yet");
-
-        Console.WriteLine($"All hit positions: {(hitPositions.Any() ? string.Join(", ", hitPositions) : "none")}");
-    }
-
-    private Board GenerateOpponentBoard(int rows, int columns)
+    // Пункт 3 — генерация доски компьютера с тем же количеством кораблей что у игрока
+    private Board GenerateOpponentBoard(int shipCount)
     {
         var random = new Random();
-        int shipLength = random.Next(1, Math.Min(rows, columns) + 1);
-        int shipX = random.Next(0, rows - shipLength + 1);
-        int shipY = random.Next(0, columns);
+        var ships = new List<Ship>();
 
-        var shipPosition = new Position(shipX, shipY);
-        var ship = new Ship(shipPosition, shipLength);
-        return new Board(rows, columns, ship);
-    }
-
-    private bool TryReadFromConsole(string coordinateName, int roundCount, out int coordinate)
-    {
-        Console.WriteLine($"Input your {coordinateName} coordinate for round {roundCount}:");
-        var input = Console.ReadLine();
-        if (!int.TryParse(input, out coordinate))
+        while (ships.Count < shipCount)
         {
-            Console.WriteLine("Invalid input");
-            return false;
+            var candidate = random.NextShip(_settings);
+
+            // Пункт 3 — проверяем что новый корабль не пересекается с уже созданными
+            bool intersects = ships.Any(s => s.Intersects(candidate));
+            if (!intersects)
+                ships.Add(candidate);
         }
-        return true;
+
+        return new Board(_settings.Rows, _settings.Columns, ships.ToArray());
     }
 }

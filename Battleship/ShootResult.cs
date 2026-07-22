@@ -1,0 +1,5 @@
+﻿enum ShootResult
+{
+    Hit,
+    Miss
+}

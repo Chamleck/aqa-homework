@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloAqa", "HelloAqa.csproj", "{F2BD5927-094D-457D-ADAA-9ADE2334E78D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Battleship", "..\Battleship\Battleship.csproj", "{FDDF9159-270B-46AD-B523-91034105A39C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{F2BD5927-094D-457D-ADAA-9ADE2334E78D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2BD5927-094D-457D-ADAA-9ADE2334E78D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2BD5927-094D-457D-ADAA-9ADE2334E78D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FDDF9159-270B-46AD-B523-91034105A39C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDDF9159-270B-46AD-B523-91034105A39C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDDF9159-270B-46AD-B523-91034105A39C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDDF9159-270B-46AD-B523-91034105A39C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

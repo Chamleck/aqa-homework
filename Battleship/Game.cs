@@ -3,57 +3,140 @@ class Game
     public int PlayerHits { get; private set; }
     public int ComputerHits { get; private set; }
 
+    private List<Shot> Shots { get; } = new List<Shot>();
+
     public void Play(Board userBoard)
     {
-        var opponentBoard = GenerateOpponentBoard(userBoard.Rows, userBoard.Columns);
+        Board opponentBoard;
+
+        try
+        {
+            opponentBoard = GenerateOpponentBoard(userBoard.Rows, userBoard.Columns);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Failed to generate opponent board: {e.Message}");
+            return;
+        }
+
         var roundCount = 0;
 
         while (true)
         {
             roundCount++;
 
-            if (!TryReadFromConsole("X", roundCount, out var xPosition))
-                continue;
-            if (!TryReadFromConsole("Y", roundCount, out var yPosition))
-                continue;
-
-            var userShot = new Position(xPosition, yPosition);
-
-            if (!opponentBoard.IsInside(userShot))
+            try
             {
-                Console.WriteLine("Invalid shot position!");
-                continue;
-            }
+                if (!TryReadFromConsole("X", roundCount, out var xPosition))
+                    continue;
+                if (!TryReadFromConsole("Y", roundCount, out var yPosition))
+                    continue;
 
-            if (opponentBoard.HasShip(userShot))
+                var userShotPosition = new Position(xPosition, yPosition);
+
+                if (!opponentBoard.IsInside(userShotPosition))
+                    throw new Exception("Shot position is outside the board!");
+
+                bool alreadyShot = Shots.Any(s =>
+                    s.Board == opponentBoard &&
+                    s.Position.X == userShotPosition.X &&
+                    s.Position.Y == userShotPosition.Y);
+
+                if (alreadyShot)
+                    throw new Exception($"You already shot at X:{xPosition}, Y:{yPosition}!");
+
+                var userShot = MakeShot(opponentBoard, userShotPosition);
+
+                if (userShot.IsHit)
+                {
+                    Console.WriteLine("Hit!");
+                    PlayerHits++;
+                }
+                else
+                {
+                    Console.WriteLine("Miss!");
+                }
+
+                var random = new Random();
+                Position computerShotPosition;
+
+                do
+                {
+                    int computerX = random.Next(0, userBoard.Rows);
+                    int computerY = random.Next(0, userBoard.Columns);
+                    computerShotPosition = new Position(computerX, computerY);
+                }
+                while (Shots.Any(s =>
+                    s.Board == userBoard &&
+                    s.Position.X == computerShotPosition.X &&
+                    s.Position.Y == computerShotPosition.Y));
+
+                var computerShot = MakeShot(userBoard, computerShotPosition);
+
+                Console.WriteLine($"Computer shoots at X:{computerShotPosition.X}, Y:{computerShotPosition.Y}");
+
+                if (computerShot.IsHit)
+                {
+                    Console.WriteLine("Computer hit your ship!");
+                    ComputerHits++;
+                }
+                else
+                {
+                    Console.WriteLine("Computer missed!");
+                }
+
+                PrintStats(userBoard, opponentBoard);
+            }
+            catch (Exception e)
             {
-                Console.WriteLine("Hit!");
-                PlayerHits++;
+                roundCount--;
+                Console.WriteLine($"Error: {e.Message}");
             }
-            else
-            {
-                Console.WriteLine("Miss!");
-            }
-
-            var random = new Random();
-            int computerX = random.Next(0, userBoard.Rows);
-            int computerY = random.Next(0, userBoard.Columns);
-            var computerShot = new Position(computerX, computerY);
-
-            Console.WriteLine($"Computer shoots at X:{computerX}, Y:{computerY}");
-
-            if (userBoard.HasShip(computerShot))
-            {
-                Console.WriteLine("Computer hit your ship!");
-                ComputerHits++;
-            }
-            else
-            {
-                Console.WriteLine("Computer missed!");
-            }
-
-            Console.WriteLine($"Score — You: {PlayerHits} | Computer: {ComputerHits}");
         }
+    }
+
+    private Shot MakeShot(Board board, Position position)
+    {
+        var ship = board.FindShip(position);
+        var shot = new Shot(board, position, ship);
+        Shots.Add(shot);
+        return shot;
+    }
+
+    private void PrintStats(Board userBoard, Board opponentBoard)
+    {
+        Console.WriteLine("\n=== STATISTICS ===");
+        PrintBoardStats("Your board", userBoard);
+        PrintBoardStats("Opponent board", opponentBoard);
+        Console.WriteLine($"Total score — You: {PlayerHits} | Computer: {ComputerHits}");
+        Console.WriteLine("==================\n");
+    }
+
+    private void PrintBoardStats(string boardName, Board board)
+    {
+        var boardShots = Shots.Where(s => s.Board == board).ToList();
+        int totalShots = boardShots.Count();
+        int hits = boardShots.Count(s => s.IsHit);
+        int misses = boardShots.Count(s => !s.IsHit);
+        bool anyMiss = boardShots.Any(s => !s.IsHit);
+        var firstHit = boardShots.FirstOrDefault(s => s.IsHit);
+        var hitPositions = boardShots
+            .Where(s => s.IsHit)
+            .Select(s => $"X:{s.Position.X}, Y:{s.Position.Y}")
+            .ToList();
+
+        Console.WriteLine($"\n--- {boardName} ---");
+        Console.WriteLine($"Total shots: {totalShots}");
+        Console.WriteLine($"Hits: {hits}");
+        Console.WriteLine($"Misses: {misses}");
+        Console.WriteLine($"Any miss: {anyMiss}");
+
+        if (firstHit != null)
+            Console.WriteLine($"First hit: X:{firstHit.Position.X}, Y:{firstHit.Position.Y}");
+        else
+            Console.WriteLine("First hit: none yet");
+
+        Console.WriteLine($"All hit positions: {(hitPositions.Any() ? string.Join(", ", hitPositions) : "none")}");
     }
 
     private Board GenerateOpponentBoard(int rows, int columns)

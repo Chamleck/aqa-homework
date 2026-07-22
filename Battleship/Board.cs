@@ -1,4 +1,4 @@
-﻿class Board
+class Board
 {
     public int Rows { get; }
     public int Columns { get; }
@@ -18,12 +18,10 @@
         Ship = ship;
 
         // Пункт 1 — проверка что корабль находится внутри поля
-        // делаем в конструкторе Board как требует ДЗ
         if (!IsShipInsideBoard())
             throw new ArgumentException("Ship is outside the board boundaries");
     }
 
-    // Проверяет что корабль полностью внутри поля
     private bool IsShipInsideBoard()
     {
         var shipStart = new Position(Ship.Position.X, Ship.Position.Y);
@@ -45,7 +43,6 @@
     }
 
     // Пункт 4 — возвращает корабль если попали, null если промах
-    // Ship? — nullable тип, может вернуть Ship или null
     public Ship? FindShip(Position position)
     {
         return HasShip(position) ? Ship : null;

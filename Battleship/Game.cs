@@ -1,4 +1,4 @@
-﻿class Game
+class Game
 {
     public int PlayerHits { get; private set; }
     public int ComputerHits { get; private set; }
@@ -89,7 +89,7 @@
             }
             catch (Exception e)
             {
-                roundCount--; // ← откатываем счётчик — раунд не засчитан
+                roundCount--;
                 Console.WriteLine($"Error: {e.Message}");
             }
         }

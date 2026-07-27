@@ -1,4 +1,4 @@
-﻿class Board
+class Board
 {
     public int Rows { get; }
     public int Columns { get; }

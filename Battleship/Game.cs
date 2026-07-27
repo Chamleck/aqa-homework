@@ -1,4 +1,4 @@
-﻿class Game
+class Game
 {
     private readonly GameSettings _settings;
 
